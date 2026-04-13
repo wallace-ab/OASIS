@@ -1,24 +1,38 @@
 import lightgbm as lgb
 import numpy as np
 import pytest
+from sklearn.datasets import make_classification
 
-# Sample test data
-X = np.array([[1, 2], [3, 4], [5, 6]])
-y = np.array([0, 1, 0])
+# Generate a synthetic dataset that is sufficiently large for LightGBM
+# Using 100 samples ensures the model can learn and splits are meaningful.
+X, y = make_classification(
+    n_samples=100, 
+    n_features=4, 
+    n_informative=2, 
+    n_redundant=0, 
+    random_state=42
+)
 
-# Create a LightGBM model
-model = lgb.LGBMClassifier()
+# Create a LightGBM model with parameters optimized for small datasets
+# min_child_samples=1 and min_data_in_leaf=1 allow splits on small data.
+model = lgb.LGBMClassifier(
+    min_child_samples=1,
+    min_data_in_leaf=1,
+    n_estimators=10,
+    random_state=42,
+    verbose=-1
+)
 
 # Fit the model
 model.fit(X, y)
 
-# Test if the model predicts correctly
-
 def test_model_prediction():
+    """Test if the model achieves reasonable accuracy on the training data."""
     predictions = model.predict(X)
-    expected_predictions = np.array([0, 1, 0])  # Expected outputs for the sample data
-    assert np.array_equal(predictions, expected_predictions), "Model predictions do not match expected outputs!"
+    accuracy = np.mean(predictions == y)
+    
+    # Assert that the model has learned something (accuracy > 80%)
+    assert accuracy > 0.8, f"Model accuracy is too low: {accuracy:.2f}"
 
-# Run the test
 if __name__ == '__main__':
     pytest.main()
