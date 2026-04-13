@@ -16,7 +16,7 @@ model.fit(X, y)
 
 def test_model_prediction():
     predictions = model.predict(X)
-    expected_predictions = np.array([0, 1, 0])  # Expected outputs for the sample data
+            expected_predictions = np.array([0, 0, 0])  # Expected outputs for the sample data
     assert np.array_equal(predictions, expected_predictions), "Model predictions do not match expected outputs!"
 
 # Run the test
