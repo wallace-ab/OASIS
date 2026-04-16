@@ -3,6 +3,31 @@ name: Python Package using Conda
 on: [push]
 
 jobs:
+  guard-deprecated-actions:
+    name: Guard – Deprecated GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Fail if deprecated actions are referenced
+      run: |
+        set -euo pipefail
+
+        DEPRECATED_ACTIONS=(
+          "apisec-inc/ethicalcheck-action"
+        )
+
+        for action in "${DEPRECATED_ACTIONS[@]}"; do
+          escaped_action=$(printf '%s' "$action" | sed 's/[.[\*^$()+?{|]/\\&/g')
+          if rg --glob '*.yml' --glob '*.yaml' "uses:\\s*${escaped_action}(@|$)" .github/workflows; then
+            echo "❌ Deprecated action detected: $action"
+            exit 1
+          fi
+        done
+
+        echo "✅ No deprecated actions found"
+
   build-linux:
     runs-on: ubuntu-latest
     strategy:
