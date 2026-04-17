@@ -1,10 +1,10 @@
-name: EthicalCheck-Workflow
+name: API-Security-Scan
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
   schedule:
     - cron: '38 20 * * 3'
   workflow_dispatch:
@@ -13,39 +13,21 @@ permissions:
   contents: read
 
 jobs:
-  trigger_ethicalcheck:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  zap_scan:
     permissions:
       security-events: write
       actions: read
-
+    runs-on: ubuntu-latest
+    name: Scan the API
     steps:
-      # GitHub does not allow using secrets directly in `if:` expressions,
-      # so validate required inputs in a shell step and branch on its output.
-      - name: Validate EthicalCheck configuration
-        id: validate
-        shell: bash
-        run: |
-          if [[ -z "${{ vars.ETHICALCHECK_OAS_URL }}" || -z "${{ secrets.ETHICALCHECK_EMAIL }}" ]]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Skipping EthicalCheck scan. Set repo variable ETHICALCHECK_OAS_URL and secret ETHICALCHECK_EMAIL."
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: EthicalCheck Free & Automated API Security Testing Service
-        if: steps.validate.outputs.ready == 'true'
-        # Pin to a known-good commit from the upstream action README/examples
-        # to avoid branch resolution/policy issues with floating refs.
-        uses: apisec-inc/ethicalcheck-action@005fac321dd843682b1af6b72f30caaf9952c641
+      - name: ZAP Scan
+        uses: zaproxy/action-api-scan@v0.7.0
         with:
-          oas-url: ${{ vars.ETHICALCHECK_OAS_URL }}
-          email: ${{ secrets.ETHICALCHECK_EMAIL }}
-          sarif-result-file: "ethicalcheck-results.sarif"
-
-      - name: Upload sarif file to repository
-        if: always() && steps.validate.outputs.ready == 'true' && hashFiles('ethicalcheck-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ./ethicalcheck-results.sarif
+          token: ${{ secrets.GITHUB_TOKEN }}
+          format: openapi
+          target: 'http://netbanking.apisec.ai:8080/v2/api-docs'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
